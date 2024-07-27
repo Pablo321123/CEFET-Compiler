@@ -10,14 +10,21 @@ public class Lexer implements AutoCloseable {
     public int line = 1;
     private char ch = ' ';
     private FileReader file;
-    private Hashtable<String, Word> words = new Hashtable<>();
+    private Hashtable<String, Word> words = new Hashtable<>(); // Tabela de símbolos
+    private ReservedBank rb;
 
     public Lexer(String fileName) throws FileNotFoundException {
         try {
             file = new FileReader(fileName);
+            rb = new ReservedBank();
         } catch (FileNotFoundException e) {
             System.out.println("Boa tarde! Arquivo não encontrado!");
             throw e;
+        }
+
+        // Insere palavras reservadas na hashtable
+        for (Word w : rb.reservedWords.values()) {
+            reserve(new Word(w.getLexeme(), w.getTag()));
         }
     }
 
@@ -45,7 +52,7 @@ public class Lexer implements AutoCloseable {
     public Token scan() throws IOException {
         // Desconsidera delimitadores na entrada
         for (;; readch()) {
-            if (ch == ' ' || Character.isISOControl(ch)) {
+            if ((ch == ' ' || ch == '\t' || ch == '\r' || ch == '\b')) {
                 continue;
             } else if (ch == '\n') {
                 line++;
@@ -58,33 +65,86 @@ public class Lexer implements AutoCloseable {
             // Operadores
             case '&':
                 if (readch('&')) {
-                    return Word.and;
+                    return new Token(TokenType.AND);
+                    // return Word.and;
                 } else {
-                    return new Token(TokenType.AND);// &&
+                    return new Token(TokenType.INVALID_TOKEN);// &&
                 }
             case '|':
                 if (readch('|')) {
-                    return Word.or;
+                    return new Token(TokenType.OR);
+                    // return Word.or;
                 } else {
-                    return new Token(TokenType.OR); // ||
+                    return new Token(TokenType.INVALID_TOKEN); // ||
                 }
             case '=':
-                if (readch('=')) {
-                    return Word.eq;
-                } else {
+                if (readch(' ')) {
                     return new Token(TokenType.ASSIGN);
+                } else {
+                    return new Token(TokenType.INVALID_TOKEN);
                 }
             case '<':
                 if (readch('=')) {
-                    return Word.le;
+                    return new Token(TokenType.LESS_EQUAL);
+                    // return Word.le;
                 } else {
                     return new Token(TokenType.LESS); // <
                 }
             case '>':
                 if (readch('=')) {
-                    return Word.ge;
+                    return new Token(TokenType.GREATER_EQUAL);
+                    // return Word.ge;
                 } else {
                     return new Token(TokenType.GREATER); // >
+                }
+            case '(': // OPEN_PAR
+                readch();
+                return new Token(TokenType.OPEN_PAR);
+            case ')': // CLOSE_PAR
+                readch();
+                return new Token(TokenType.CLOSE_PAR);
+            case '!': // NOT
+                if (readch('=')) { // NOT_EQUAL
+                    return new Token(TokenType.NOT_EQUAL);
+                } else {
+                    return new Token(TokenType.NOT);
+                }
+            case '-': // MINUS
+                readch();
+                return new Token(TokenType.MINUS);
+            case '+': // PLUS
+                readch();
+                return new Token(TokenType.PLUS);
+
+            case '*': // MULTIPLY
+                if (readch(' ')) {
+                    return new Token(TokenType.MULTIPLY);
+                } else {
+                    return new Token(TokenType.INVALID_TOKEN);
+                }
+            case '/': // DIVIDE
+                if (readch(' ')) {
+                    return new Token(TokenType.DIVIDE);
+                } else {
+                    return new Token(TokenType.INVALID_TOKEN);
+                }
+            case ';': // SEMICOLON
+                readch();
+                return new Token(TokenType.SEMICOLON);
+            case ':': // DOT_ASSIGN
+                if (readch('=')) {
+                    return new Token(TokenType.DOT_ASSIGN);
+                } else {
+                    return new Token(TokenType.INVALID_TOKEN);
+                }
+            case '_': // UNDERSCORE
+                readch();
+                return new Token(TokenType.UNDERSCORE);
+            case ',': // COMMA
+                if (readch(' ')) {
+                    return new Token(TokenType.COMMA);
+                } else {
+                    return new Token(TokenType.INVALID_TOKEN);
                 }
             default:
                 break;
@@ -92,13 +152,67 @@ public class Lexer implements AutoCloseable {
 
         // Números
         if (Character.isDigit(ch)) {
+
+            int numberState = 1;
+            StringBuilder number = new StringBuilder();
+            boolean real = false;
             int value = 0;
+
             do {
-                value = 10 * value + Character.digit(ch, 10);
-                readch();
+                switch (numberState) {
+                    case 1:
+                        value = 10 * value + Character.digit(ch, 10);
+                        if (value > 0 && value <= 9) {
+                            numberState = 2;
+                        } else {
+                            numberState = 3;
+                        }
+                        number.append(ch);
+                        readch();
+                        continue;
+                    case 2:
+                        if (readch('.')) {
+                            numberState = 4;
+                            number.append('.');
+                            readch();
+                        } else {
+                            numberState = 2;
+                            number.append(ch);
+                        }
+                        continue;
+                    case 3:
+                        if (readch('.')) {
+                            number.append(ch);
+                            numberState = 4;
+                        } else {
+                            number.append(ch);
+                            numberState = -1;
+                            return new Token(TokenType.INVALID_TOKEN);
+                        }
+                        continue;
+                    case 4:
+                        real = true;
+                        number.append(ch);
+                        readch();
+                        // Sintatico?
+                        // if (!Character.isDigit(ch) && (ch != ' ' && ch != '\n' && ch != '\t' && ch != ';')) {
+                        //     numberState = -1;
+                        // }
+                        continue;
+
+                    default:
+                        System.out.println("Boa tarde!\nLinha " + line + ": Má formação de número real!" + "\nNúmero:"
+                                + number + "\nDeu pal");
+                        return new Token(TokenType.INVALID_TOKEN);
+                }
+
             } while (Character.isDigit(ch));
 
-            return new Num(value);
+            if (real) {
+                return new Num(Float.parseFloat(number.toString()));
+            } else {
+                return new Num(Integer.parseInt(number.toString()));
+            }
         }
 
         // Identificadores
@@ -110,6 +224,7 @@ public class Lexer implements AutoCloseable {
             } while (Character.isLetterOrDigit(ch));
 
             String s = sb.toString();
+
             Word w = (Word) words.get(s);
 
             if (w != null) {
@@ -122,11 +237,10 @@ public class Lexer implements AutoCloseable {
         }
 
         // Caracteres não especificados
-        Token t = new Token(TokenType.VAR);
+        Token t = new Word("" + ch, TokenType.INVALID_TOKEN);
         ch = ' ';
         return t;
     }
-
 
     public char getCh() {
         return ch;

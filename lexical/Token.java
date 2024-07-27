@@ -17,4 +17,8 @@ public class Token {
         return tag;
     }
 
+    public String getLexeme() {    
+        return tag.getLexema();   
+    }
+
 }

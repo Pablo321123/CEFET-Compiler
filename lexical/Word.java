@@ -1,8 +1,11 @@
 package lexical;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Word extends Token {
 
-    private String lexeme;
+    private String lexeme;   
 
     public static final Word and = new Word("&&", TokenType.AND);
     public static final Word or = new Word("||", TokenType.OR);
@@ -17,6 +20,7 @@ public class Word extends Token {
         super(identifier);
         lexeme = s;
     }
+    
 
     @Override
     public String toString() {
