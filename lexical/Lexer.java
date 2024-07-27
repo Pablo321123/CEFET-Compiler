@@ -161,14 +161,13 @@ public class Lexer implements AutoCloseable {
             do {
                 switch (numberState) {
                     case 1:
+                        number.append(ch);
                         value = 10 * value + Character.digit(ch, 10);
                         if (value > 0 && value <= 9) {
                             numberState = 2;
                         } else {
                             numberState = 3;
                         }
-                        number.append(ch);
-                        readch();
                         continue;
                     case 2:
                         if (readch('.')) {
@@ -176,18 +175,22 @@ public class Lexer implements AutoCloseable {
                             number.append('.');
                             readch();
                         } else {
+                            if (!Character.isDigit(ch)) {
+                                break;
+                            }
                             numberState = 2;
                             number.append(ch);
                         }
                         continue;
                     case 3:
                         if (readch('.')) {
-                            number.append(ch);
+                            number.append('.');
+                            readch();
                             numberState = 4;
                         } else {
                             number.append(ch);
                             numberState = -1;
-                            return new Token(TokenType.INVALID_TOKEN);
+                            // return new Token(TokenType.INVALID_TOKEN);
                         }
                         continue;
                     case 4:
@@ -195,8 +198,9 @@ public class Lexer implements AutoCloseable {
                         number.append(ch);
                         readch();
                         // Sintatico?
-                        // if (!Character.isDigit(ch) && (ch != ' ' && ch != '\n' && ch != '\t' && ch != ';')) {
-                        //     numberState = -1;
+                        // if (!Character.isDigit(ch) && (ch != ' ' && ch != '\n' && ch != '\t' && ch !=
+                        // ';')) {
+                        // numberState = -1;
                         // }
                         continue;
 
