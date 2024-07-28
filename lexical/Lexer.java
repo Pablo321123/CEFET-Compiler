@@ -10,16 +10,16 @@ public class Lexer implements AutoCloseable {
     public int line = 1;
     private char ch = ' ';
     private FileReader file;
-    private Hashtable<String, Word> words = new Hashtable<>(); // Tabela de símbolos
+    private Hashtable<String, Word> words = new Hashtable<>(); // Tabela de Tokens
+    private Hashtable<String, TokenType> symbleTable = new Hashtable<>(); // Tabela de símbolos
     private ReservedBank rb;
 
     public Lexer(String fileName) throws FileNotFoundException {
         try {
             file = new FileReader(fileName);
             rb = new ReservedBank();
-        } catch (FileNotFoundException e) {
-            System.out.println("Boa tarde! Arquivo não encontrado!");
-            throw e;
+        } catch (Exception e) {
+            throw new LexerException("Boa tarde! Arquivo não encontrado!");
         }
 
         // Insere palavras reservadas na hashtable
@@ -207,7 +207,7 @@ public class Lexer implements AutoCloseable {
                     default:
                         System.out.println("Boa tarde!\nLinha " + line + ": Má formação de número real!" + "\nNúmero:"
                                 + number + "\nDeu pal");
-                        return new Token(TokenType.INVALID_TOKEN);
+                        return new Token(TokenType.UNEXPECTED_EOF);
                 }
 
             } while (Character.isDigit(ch));
@@ -254,9 +254,33 @@ public class Lexer implements AutoCloseable {
         return line;
     }
 
+    public void addSymbleTable(String lexeme, TokenType token) {
+        symbleTable.put(lexeme, token);
+    }
+
+    public Hashtable<String, TokenType> getSymbleTable() {
+        String txt = "";
+        int len = 0;
+        System.out.println("+----------------+----------------------+");
+        System.out.println("|     Lexeme     |         Type         |");
+        System.out.println("+----------------+----------------------+");
+
+        for (String key : symbleTable.keySet()) {
+            len = symbleTable.get(key).name().length();
+            txt = (len <= 3) ? "\t\t|" : (len >= 13) ? "\t|" : "    \t|";
+            System.out.println("|\t" + key + "\t |\t" + symbleTable.get(key).name() + txt);
+        }
+        System.out.println("+----------------+----------------------+");
+
+        return symbleTable;
+    }
+
     @Override
     public void close() throws Exception {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'close'");
+        try {
+            file.close();
+        } catch (Exception e) {
+            throw new LexerException("Unable to close file");
+        }
     }
 }

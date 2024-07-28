@@ -8,10 +8,15 @@ public class LexerTest {
             Token lex;
             do {
                 lex = l.scan();
+                l.addSymbleTable(lex.getLexeme(), lex.getTag());
                 System.out.printf("%02d: (\"%s\", %s)\n", l.line, lex.getLexeme(), lex.getTag());
             } while (lex.getTag() != TokenType.EOF &&
                     lex.getTag() != TokenType.INVALID_TOKEN &&
                     lex.getTag() != TokenType.UNEXPECTED_EOF);
+
+            System.out.println("+-----------Symble Table----------------+");
+
+            l.getSymbleTable();
 
         } catch (Exception e) {
             System.err.println("Internal error: " + e.getMessage());
