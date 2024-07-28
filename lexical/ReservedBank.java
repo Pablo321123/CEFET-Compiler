@@ -48,5 +48,7 @@ public class ReservedBank {
         reservedWords.put(":=", new Word(":=", TokenType.DOT_ASSIGN));
         reservedWords.put("_", new Word("_", TokenType.UNDERSCORE));
         reservedWords.put(",", new Word(",", TokenType.COMMA));
+        reservedWords.put("{", new Word("{", TokenType.OPEN_KEY));
+        reservedWords.put("}", new Word("}", TokenType.CLOSE_KEY));
     }
 }

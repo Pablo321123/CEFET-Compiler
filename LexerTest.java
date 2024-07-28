@@ -3,13 +3,18 @@ import lexical.*;
 public class LexerTest {
 
     public static void main(String[] args) {
+
         // try (Lexer l = new Lexer(args[0])) {
-        try (Lexer l = new Lexer("ex1.txt")) {
+        try (Lexer l = new Lexer("ex6.txt")) {
             Token lex;
             do {
                 lex = l.scan();
-                l.addSymbleTable(lex.getLexeme(), lex.getTag());
-                System.out.printf("%02d: (\"%s\", %s)\n", l.line, lex.getLexeme(), lex.getTag());
+                if (lex.getTag() == TokenType.COMMENT) {
+                    continue;
+                } else {
+                    l.addSymbleTable(lex.getLexeme(), lex.getTag());
+                    System.out.printf("%02d: (\"%s\", %s)\n", l.line, lex.getLexeme(), lex.getTag());
+                }
             } while (lex.getTag() != TokenType.EOF &&
                     lex.getTag() != TokenType.INVALID_TOKEN &&
                     lex.getTag() != TokenType.UNEXPECTED_EOF);
@@ -20,7 +25,7 @@ public class LexerTest {
 
         } catch (Exception e) {
             System.err.println("Internal error: " + e.getMessage());
-            e.printStackTrace();
+            // e.printStackTrace();
         }
     }
 

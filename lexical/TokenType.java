@@ -21,6 +21,8 @@ public enum TokenType {
     // Operadores e Pontuação
     OPEN_PAR("("), // (
     CLOSE_PAR(")"), // )
+    OPEN_KEY("{"), // {
+    CLOSE_KEY("}"), // }
     NOT("!"), // !
     MINUS("-"), // -
     ASSIGN("="), // =
@@ -39,6 +41,7 @@ public enum TokenType {
     DOT_ASSIGN(":="), // :=
     UNDERSCORE("_"), // _
     COMMA(","), // ,
+    COMMENT("%"), // ,
 
     // Outros
     IDENTIFIER(""), // identifier

@@ -78,11 +78,8 @@ public class Lexer implements AutoCloseable {
                     return new Token(TokenType.INVALID_TOKEN); // ||
                 }
             case '=':
-                if (readch(' ')) {
-                    return new Token(TokenType.ASSIGN);
-                } else {
-                    return new Token(TokenType.INVALID_TOKEN);
-                }
+                readch();
+                return new Token(TokenType.ASSIGN);
             case '<':
                 if (readch('=')) {
                     return new Token(TokenType.LESS_EQUAL);
@@ -117,17 +114,11 @@ public class Lexer implements AutoCloseable {
                 return new Token(TokenType.PLUS);
 
             case '*': // MULTIPLY
-                if (readch(' ')) {
-                    return new Token(TokenType.MULTIPLY);
-                } else {
-                    return new Token(TokenType.INVALID_TOKEN);
-                }
+                readch();
+                return new Token(TokenType.MULTIPLY);
             case '/': // DIVIDE
-                if (readch(' ')) {
-                    return new Token(TokenType.DIVIDE);
-                } else {
-                    return new Token(TokenType.INVALID_TOKEN);
-                }
+                readch();
+                return new Token(TokenType.DIVIDE);
             case ';': // SEMICOLON
                 readch();
                 return new Token(TokenType.SEMICOLON);
@@ -135,17 +126,20 @@ public class Lexer implements AutoCloseable {
                 if (readch('=')) {
                     return new Token(TokenType.DOT_ASSIGN);
                 } else {
-                    return new Token(TokenType.INVALID_TOKEN);
+                    throw new LexerException("Token Invalido!" + " :");
                 }
-            case '_': // UNDERSCORE
-                readch();
-                return new Token(TokenType.UNDERSCORE);
+                // case '_': // UNDERSCORE
+                // readch();
+                // return new Token(TokenType.UNDERSCORE);
             case ',': // COMMA
-                if (readch(' ')) {
-                    return new Token(TokenType.COMMA);
-                } else {
-                    return new Token(TokenType.INVALID_TOKEN);
-                }
+                readch();
+                return new Token(TokenType.COMMA);
+            // case '{': // COMMA
+            // readch();
+            // return new Token(TokenType.OPEN_KEY);
+            // case '}': // COMMA
+            // readch();
+            // return new Token(TokenType.CLOSE_KEY);
             default:
                 break;
         }
@@ -175,11 +169,16 @@ public class Lexer implements AutoCloseable {
                             number.append('.');
                             readch();
                         } else {
-                            if (!Character.isDigit(ch)) {
+                            String operadores = ";+-*/()\r\n\t";
+                            if (ch == ' ' || operadores.contains(Character.toString(ch))) {
                                 break;
+                            } else if (!Character.isDigit(ch)) {
+                                numberState = -1;
+                                break;
+                            } else {
+                                numberState = 2;
+                                number.append(ch);
                             }
-                            numberState = 2;
-                            number.append(ch);
                         }
                         continue;
                     case 3:
@@ -187,11 +186,12 @@ public class Lexer implements AutoCloseable {
                             number.append('.');
                             readch();
                             numberState = 4;
-                        } else {
-                            number.append(ch);
-                            numberState = -1;
-                            // return new Token(TokenType.INVALID_TOKEN);
                         }
+                        // else {
+                        // number.append(ch);
+                        // numberState = -1;
+                        // // return new Token(TokenType.INVALID_TOKEN);
+                        // }
                         continue;
                     case 4:
                         real = true;
@@ -205,12 +205,17 @@ public class Lexer implements AutoCloseable {
                         continue;
 
                     default:
-                        System.out.println("Boa tarde!\nLinha " + line + ": Má formação de número real!" + "\nNúmero:"
-                                + number + "\nDeu pal");
-                        return new Token(TokenType.UNEXPECTED_EOF);
+                        throw new LexerException(
+                                "Boa tarde!\nLinha " + line + ": Má formação de número real!" + "\nNúmero:"
+                                        + number + "\n");
                 }
 
             } while (Character.isDigit(ch));
+
+            if (numberState == -1) {
+                throw new LexerException("Boa tarde!\nLinha " + line + ": Má formação de número real!" + "\nNúmero:"
+                        + number + "\n");
+            }
 
             if (real) {
                 return new Num(Float.parseFloat(number.toString()));
@@ -220,7 +225,7 @@ public class Lexer implements AutoCloseable {
         }
 
         // Identificadores
-        if (Character.isLetter(ch)) {
+        if (Character.isLetter(ch) || ch == '_') {
             StringBuffer sb = new StringBuffer();
             do {
                 sb.append(ch);
@@ -240,10 +245,51 @@ public class Lexer implements AutoCloseable {
             return w;
         }
 
+        if (ch == (char) -1) {
+            Token t = new Word("", TokenType.EOF);
+            ch = ' ';
+            return t;
+        }
+
+        // Literal 'String'
+        switch (ch) {
+            case '{':
+                readch();
+                StringBuilder sb = new StringBuilder();
+                int lineStart = line;
+                do {
+                    if (ch == (char) -1) {
+                        throw new LexerException("Linha: " + lineStart + " - Fim de Literal (String) não encontrado!");
+                    } else {
+                        sb.append(ch);
+                        readch();
+                    }
+
+                } while (ch != '}');
+                readch();
+                return new Word(sb.toString(), TokenType.LITERAL);
+
+            default:
+                break;
+        }
+
+        // Comentário
+        switch (ch) {
+            case '%':
+                do {
+                    readch();
+                } while (ch != '\n');
+                return new Token(TokenType.COMMENT);
+
+            default:
+                break;
+        }
+
         // Caracteres não especificados
         Token t = new Word("" + ch, TokenType.INVALID_TOKEN);
         ch = ' ';
-        return t;
+        throw new LexerException("Token Invalido!" + t.getLexeme());
+        // return new Token(TokenType.INVALID_TOKEN);
     }
 
     public char getCh() {
