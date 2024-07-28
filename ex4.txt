@@ -7,7 +7,7 @@ App teste4
  read (j);
  read (k);
  a := 10;
-i := 4 * (5-3 * 50 / 10 ;
+i := 4 * (5-3 * 50 / 10;
 j := i * 10;
 write(i);
 write(j);

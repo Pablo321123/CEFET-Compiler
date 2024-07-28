@@ -1,0 +1,10 @@
+app Teste8
+var
+ real num1, num2, mult
+init
+ num1:= 0.2;
+ num2 := 1.00;
+ mult:= num1 + num2;
+ write({Valor multiplicacao:});
+ write(mult);
+return

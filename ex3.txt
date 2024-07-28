@@ -7,7 +7,7 @@ App pessoa
  soma := 0;
  repeat
 
- write({Altura });
+ write({Altura: });
  read (altura);
  soma := soma altura;
  cont := cont - 1
@@ -16,5 +16,5 @@ App pessoa
  media := soma / 5;
 
  return;
- write({Media });
+ write({Media: });
  write (media)

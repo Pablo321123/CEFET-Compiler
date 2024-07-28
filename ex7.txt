@@ -1,0 +1,10 @@
+app Teste7
+var
+ integer num1, num2, soma;
+init
+ num1:= 20;
+ num2 := 10;
+ soma := num1 + num2;
+ write({Valor soma:});
+ write(soma);
+return

@@ -16,5 +16,6 @@
  maior := c;
  end
  end
- write({Maior idade:});
+ write({Maior idade: });
  write(maior);
+ return
