@@ -3,9 +3,8 @@ import lexical.*;
 public class LexerTest {
 
     public static void main(String[] args) {
-
         // try (Lexer l = new Lexer(args[0])) {
-        try (Lexer l = new Lexer("ex8.txt")) {
+        try (Lexer l = new Lexer(args[0])) {
             Token lex;
             do {
                 lex = l.scan();

@@ -9,7 +9,8 @@
             "name": "LexerTest",
             "request": "launch",
             "mainClass": "LexerTest",
-            "projectName": "CEFET-Compiler_f2edc389"
+            "projectName": "CEFET-Compiler_f2edc389",
+            "args": "ex1.txt"
         }
     ]
 }
