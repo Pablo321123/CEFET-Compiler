@@ -1,5 +1,5 @@
 app teste1
-var
+var 
  int a, b, c;
  real result
 init
