@@ -22,6 +22,8 @@ public class LexerTest {
 
             l.getSymbleTable();
 
+            
+
         } catch (Exception e) {
             System.err.println("Internal error: " + e.getMessage());
             // e.printStackTrace();

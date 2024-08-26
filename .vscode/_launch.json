@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "LexerTest",
+            "request": "launch",
+            "mainClass": "LexerTest",
+            "projectName": "CEFET-Compiler_f2edc389",
+            "args": "ex1.txt"
+        }
+    ]
+}
