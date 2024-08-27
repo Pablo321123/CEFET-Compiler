@@ -19,7 +19,7 @@ public class SyntacticAnalysis {
     public SyntacticAnalysis(String filePath) throws IOException {
         lex = new Lexer(filePath);
         currentToken = lex.scan();
-        symbleTable = lex.getSymbleTable();
+        // symbleTable = lex.getSymbleTable();
     }
 
     private void advance() throws IOException {
@@ -148,6 +148,7 @@ public class SyntacticAnalysis {
                 break;
             case REPEAT:
                 repeatStmt();
+                break;
             case READ:
                 readStmt();
                 break;
@@ -255,10 +256,10 @@ public class SyntacticAnalysis {
                 eat(TokenType.PLUS);
                 break;
             case MINUS:
-                eat(TokenType.PLUS);
+                eat(TokenType.MINUS);
                 break;
             case OR:
-                eat(TokenType.PLUS);
+                eat(TokenType.OR);
                 break;
 
             default:
@@ -361,6 +362,7 @@ public class SyntacticAnalysis {
     private void stmtSuffix() throws IOException, SyntaticException {
         switch (currentToken.getTag()) {
             case UNTIL:
+                eat(TokenType.UNTIL);
                 condition();
                 break;
 
@@ -419,6 +421,7 @@ public class SyntacticAnalysis {
     }
 
     private void error() throws SyntaticException {
-        throw new SyntaticException("\nToken " + this.currentToken + " não esperado!\nLinha: " + lex.getLine() + "\n");
+        throw new SyntaticException(
+                "\nToken " + this.currentToken.getTag().name() + " não esperado!\nLinha: " + lex.getLine() + "\n");
     }
 }
