@@ -24,6 +24,10 @@ public class SyntacticAnalysis {
 
     private void advance() throws IOException {
         currentToken = lex.scan();
+
+        if (currentToken.getTag() == TokenType.COMMENT) {
+            advance();
+        }
     }
 
     private void eat(TokenType t) throws IOException, SyntaticException {
@@ -42,6 +46,10 @@ public class SyntacticAnalysis {
 
     // program ::= app identifier body
     public void program() throws IOException, SyntaticException {
+        if (currentToken.getTag() == TokenType.COMMENT) {
+            advance();
+        }
+
         switch (currentToken.getTag()) {
             case APP:
                 advance();
@@ -177,8 +185,9 @@ public class SyntacticAnalysis {
         stmtList();
 
         if (currentToken.getTag() == TokenType.END) {
-            return;
+            eat(TokenType.END);
         } else {
+            eat(TokenType.ELSE);
             stmtList();
             eat(TokenType.END);
         }

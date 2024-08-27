@@ -24,7 +24,7 @@
             "request": "launch",
             "mainClass": "main.Main",
             "projectName": "CEFET-Compiler_f2edc389",
-            "args": "ex3.txt"
+            "args": "ex2.txt"
             
         }
     ]

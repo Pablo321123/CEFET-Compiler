@@ -10,11 +10,9 @@ app pessoa
  write({Altura: });
  read (altura);
  soma := soma + altura;
- cont := cont - 1;
+ cont := cont - 1
 
  until(cont=0);
- media := soma / 5;
+ media := soma / 5
 
- return;
- write({Media: });
- write (media)
+ return
