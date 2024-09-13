@@ -4,8 +4,12 @@ import java.io.IOException;
 import java.util.Hashtable;
 
 import lexical.Lexer;
+import lexical.Symbol;
 import lexical.Token;
 import lexical.TokenType;
+import semantic.SemanticAnaliser;
+import semantic.SemanticAnaliser.VariableType;
+import semantic.SemanticException;
 
 /**
  * SyntacticAnalysis
@@ -14,11 +18,12 @@ public class SyntacticAnalysis {
 
     private Lexer lex;
     private Token currentToken;
-    private Hashtable<String, TokenType> symbleTable;
+    private SemanticAnaliser sem;
 
     public SyntacticAnalysis(String filePath) throws IOException {
         lex = new Lexer(filePath);
         currentToken = lex.scan();
+        sem = new SemanticAnaliser();
         // symbleTable = lex.getSymbleTable();
     }
 
@@ -38,14 +43,14 @@ public class SyntacticAnalysis {
         }
     }
 
-    public void start() throws IOException, SyntaticException {
+    public void start() throws IOException, SyntaticException, SemanticException {
         this.program();
         eat(TokenType.EOF);
         System.out.println("Semantic Analysis Done!");
     }
 
     // program ::= app identifier body
-    public void program() throws IOException, SyntaticException {
+    public void program() throws IOException, SyntaticException, SemanticException {
         if (currentToken.getTag() == TokenType.COMMENT) {
             advance();
         }
@@ -65,7 +70,7 @@ public class SyntacticAnalysis {
     }
 
     // body ::= [ var decl-list] init stmt-list return
-    private void body() throws IOException, SyntaticException {
+    private void body() throws IOException, SyntaticException, SemanticException {
         switch (currentToken.getTag()) {
             case VAR:
                 advance();
@@ -87,7 +92,7 @@ public class SyntacticAnalysis {
     }
 
     // decl-list ::= decl {";" decl}
-    private void declList() throws IOException, SyntaticException {
+    private void declList() throws IOException, SyntaticException, SemanticException {
         this.decl();
 
         if (currentToken.getTag() == TokenType.SEMICOLON) {
@@ -97,34 +102,35 @@ public class SyntacticAnalysis {
     }
 
     // decl ::= type ident-list
-    private void decl() throws IOException, SyntaticException {
-        this.type();
-        this.identList();
+    private void decl() throws IOException, SyntaticException, SemanticException {
+        VariableType type = this.type();
+        this.identList(type);
     }
 
     // type ::= integer | real
-    private void type() throws IOException, SyntaticException {
+    private VariableType type() throws IOException, SyntaticException {
         switch (currentToken.getTag()) {
             case INTEGER:
                 eat(TokenType.INTEGER);
-                break;
+                return VariableType.INTEGER;
             case REAL:
                 eat(TokenType.REAL);
-                break;
+                return VariableType.REAL;
             default:
                 error();
-                break;
+                return VariableType.ERROR;
         }
     }
 
     // ident-list ::= identifier {"," identifier}
-    private void identList() throws IOException, SyntaticException {
+    private void identList(VariableType type) throws IOException, SyntaticException, SemanticException {
         switch (currentToken.getTag()) {
             case IDENTIFIER:
+                sem.declare(type, currentToken.getLexeme(), lex.getLine());
                 eat(TokenType.IDENTIFIER);
                 if (currentToken.getTag() == TokenType.COMMA) {
                     eat(TokenType.COMMA);
-                    identList();
+                    identList(type);
                 }
                 break;
             default:
@@ -134,7 +140,7 @@ public class SyntacticAnalysis {
     }
 
     // stmt-list ::= stmt {";" stmt}
-    private void stmtList() throws IOException, SyntaticException {
+    private void stmtList() throws IOException, SyntaticException, SemanticException {
 
         this.stmt();
 
@@ -146,7 +152,7 @@ public class SyntacticAnalysis {
     }
 
     // stmt ::= assign-stmt | if-stmt | repeat-stmt | read-stmt | write-stmt
-    private void stmt() throws SyntaticException, IOException {
+    private void stmt() throws SyntaticException, IOException, SemanticException {
         switch (currentToken.getTag()) {
             case IDENTIFIER:
                 this.assignStmt();
@@ -170,17 +176,26 @@ public class SyntacticAnalysis {
     }
 
     // assign-stmt ::= identifier ":=" simple_expr
-    private void assignStmt() throws IOException, SyntaticException {
+    private void assignStmt() throws IOException, SyntaticException, SemanticException {
+        Symbol var = sem.get_type(currentToken.getLexeme());
         eat(TokenType.IDENTIFIER);
         eat(TokenType.DOT_ASSIGN);
-        this.simpleExpr();
+        VariableType exprType = this.simpleExpr();
+
+        if (!sem.isAssignmentCompatible(var.getType(), exprType)) {
+            sem.error("Atribuição invalida: Tipos incompativeis para " + var.getName() + "\nLinha: " + lex.getLine());
+        }
+
     }
 
     // if-stmt ::= if condition then stmt-list end | if condition then stmt-list
     // else stmt-list end
-    private void ifStmt() throws IOException, SyntaticException {
+    private void ifStmt() throws IOException, SyntaticException, SemanticException {
         eat(TokenType.IF);
-        this.condition();
+        VariableType condType = this.condition();
+        if (sem.isTypeBollean(condType)) {
+            sem.error("Operador '!' apliacado a um termo não booleano!\nLinha:" + lex.getLine());
+        }
         eat(TokenType.THEN);
         stmtList();
 
@@ -194,13 +209,13 @@ public class SyntacticAnalysis {
     }
 
     // condition ::= expression
-    private void condition() throws IOException, SyntaticException {
-        this.expression();
+    private VariableType condition() throws IOException, SyntaticException, SemanticException {
+        return this.expression();
     }
 
     // expression::=simple-expr|simple-expr relop simple-expr
-    private void expression() throws IOException, SyntaticException {
-        this.simpleExpr();
+    private VariableType expression() throws IOException, SyntaticException, SemanticException {
+        VariableType left = this.simpleExpr();
         if (currentToken.getTag() == TokenType.ASSIGN
                 || currentToken.getTag() == TokenType.GREATER
                 || currentToken.getTag() == TokenType.GREATER_EQUAL
@@ -208,8 +223,14 @@ public class SyntacticAnalysis {
                 || currentToken.getTag() == TokenType.LESS_EQUAL
                 || currentToken.getTag() == TokenType.NOT_EQUAL) {
             this.relop();
-            this.simpleExpr();
+            VariableType right = this.simpleExpr();
+
+            if (sem.isOpTypeCompatible(left, right)) {
+                sem.error("Tipos Incompatíveis na expressão!\nLinha:" + lex.getLine());
+            }
+            return VariableType.BOOLEAN;
         }
+        return left;
     }
 
     // relop → "=" | ">" | ">=" | "<" | "<=" | "!="
@@ -240,21 +261,25 @@ public class SyntacticAnalysis {
     }
 
     // simple-expr ::= term simple-expr'
-    private void simpleExpr() throws IOException, SyntaticException {
-        this.term();
-        this.simpleExpr_();
+    private VariableType simpleExpr() throws IOException, SyntaticException, SemanticException {
+        VariableType termType = this.term();
+        VariableType exprType = this.simpleExpr_(termType);
+        return exprType;
     }
 
     // simple-expr’ ::= addop term simple-expr' | λ
-    private void simpleExpr_() throws IOException, SyntaticException {
+    private VariableType simpleExpr_(VariableType type) throws IOException, SyntaticException, SemanticException {
 
         if (currentToken.getTag() == TokenType.PLUS ||
                 currentToken.getTag() == TokenType.MINUS ||
                 currentToken.getTag() == TokenType.OR) {
+            TokenType op = currentToken.getTag();
             this.addop();
-            this.term();
-            this.simpleExpr_();
+            VariableType termType = this.term();
+            VariableType resultType = sem.getResultType(termType, type, op, 0);
+            return this.simpleExpr_(resultType);
         }
+        return type;
 
     }
 
@@ -278,20 +303,25 @@ public class SyntacticAnalysis {
     }
 
     // term ::= factor-a term'
-    private void term() throws IOException, SyntaticException {
-        factor_a();
-        term_();
+    private VariableType term() throws IOException, SyntaticException, SemanticException {
+        VariableType factorType = factor_a();
+        VariableType term_Type = term_(factorType);
+
+        return term_Type;
     }
 
     // term' ::= mulop factor-a term' | λ
-    private void term_() throws IOException, SyntaticException {
+    private VariableType term_(VariableType type) throws IOException, SyntaticException, SemanticException {
         if (currentToken.getTag() == TokenType.MULTIPLY ||
                 currentToken.getTag() == TokenType.DIVIDE ||
                 currentToken.getTag() == TokenType.AND) {
+            TokenType op = currentToken.getTag();
             mulop();
-            factor_a();
-            term_();
+            VariableType factorType = factor_a();
+            VariableType resultType = sem.getResultType(type, factorType, op, lex.getLine());
+            return term_(resultType);
         }
+        return type;
     }
 
     // mulop → "*" | "/" | "&&"
@@ -313,48 +343,63 @@ public class SyntacticAnalysis {
     }
 
     // fator-a ::= factor | "!" factor | "-" factor
-    private void factor_a() throws IOException, SyntaticException {
+    private VariableType factor_a() throws IOException, SyntaticException, SemanticException {
         if (currentToken.getTag() == TokenType.NOT) {
             eat(TokenType.NOT);
-            factor();
+            VariableType factorType = factor();
+            if (!sem.isTypeBollean(factorType)) {
+                sem.error("Operador '!' apliacado a um termo não booleano!\nLinha:" + lex.getLine());
+            }
+            return VariableType.BOOLEAN;
+
         } else if (currentToken.getTag() == TokenType.MINUS) {
             eat(TokenType.MINUS);
-            factor();
+            VariableType factorType = factor();
+            if (!sem.isTypeNumeric(factorType)) {
+                sem.error("Operação com operando não numerico!\nLinha:" + lex.getLine());
+            }
+            return factorType;
         } else {
-            factor();
+            return factor();
         }
     }
 
     // factor ::= identifier | constant | "(" expression ")"
-    private void factor() throws IOException, SyntaticException {
+    private VariableType factor() throws IOException, SyntaticException, SemanticException {
+        VariableType type;
         if (currentToken.getTag() == TokenType.IDENTIFIER) {
+            Symbol var = sem.get_type(currentToken.getLexeme());
             eat(TokenType.IDENTIFIER);
+            type = var.getType();
         } else if (currentToken.getTag() == TokenType.OPEN_PAR) {
             eat(TokenType.OPEN_PAR);
-            expression();
+            type = expression();
             eat(TokenType.CLOSE_PAR);
         } else {
-            this.constant();
+            type = this.constant();
         }
+
+        return type;
     }
 
     // constant → integer_const | float_const
-    private void constant() throws IOException, SyntaticException {
+    private VariableType constant() throws IOException, SyntaticException {
         switch (currentToken.getTag()) {
             case INTEGER_CONST:
                 eat(TokenType.INTEGER_CONST);
-                break;
+                return VariableType.INTEGER;
             case FLOAT_CONST:
                 eat(TokenType.FLOAT_CONST);
-                break;
+                return VariableType.REAL;
             default:
                 error();
                 break;
         }
+        return VariableType.ERROR;
     }
 
     // repeat-stmt ::= repeat stmt-list stmt-suffix
-    private void repeatStmt() throws IOException, SyntaticException {
+    private void repeatStmt() throws IOException, SyntaticException, SemanticException {
         switch (currentToken.getTag()) {
             case REPEAT:
                 eat(TokenType.REPEAT);
@@ -368,11 +413,15 @@ public class SyntacticAnalysis {
     }
 
     // stmt-suffix ::= until condition
-    private void stmtSuffix() throws IOException, SyntaticException {
+    private void stmtSuffix() throws IOException, SyntaticException, SemanticException {
         switch (currentToken.getTag()) {
             case UNTIL:
                 eat(TokenType.UNTIL);
-                condition();
+                VariableType condType = condition();
+
+                if (!sem.isTypeBollean(condType)) {
+                    sem.error("Operador '!' apliacado a um termo não booleano!\nLinha:" + lex.getLine());
+                }
                 break;
 
             default:
@@ -382,12 +431,14 @@ public class SyntacticAnalysis {
     }
 
     // read-stmt ::= read "(" identifier ")"
-    private void readStmt() throws IOException, SyntaticException {
+    private void readStmt() throws IOException, SyntaticException, SemanticException {
         switch (currentToken.getTag()) {
             case READ:
                 eat(TokenType.READ);
                 if (currentToken.getTag() == TokenType.OPEN_PAR) {
                     eat(TokenType.OPEN_PAR);
+                    // Verificar se a variavel foi declarada
+                    sem.get_type(currentToken.getLexeme());
                     eat(TokenType.IDENTIFIER);
                     eat(TokenType.CLOSE_PAR);
                 } else {
@@ -401,13 +452,13 @@ public class SyntacticAnalysis {
     }
 
     // write-stmt ::= write "(" writable ")"
-    private void writeStmt() throws IOException, SyntaticException {
+    private void writeStmt() throws IOException, SyntaticException, SemanticException {
         switch (currentToken.getTag()) {
             case WRITE:
                 eat(TokenType.WRITE);
                 if (currentToken.getTag() == TokenType.OPEN_PAR) {
                     eat(TokenType.OPEN_PAR);
-                    writable();
+                    VariableType exprType = writable();
                     eat(TokenType.CLOSE_PAR);
                 } else {
                     error();
@@ -421,11 +472,12 @@ public class SyntacticAnalysis {
     }
 
     // writable ::= simple-expr | literal
-    private void writable() throws IOException, SyntaticException {
+    private VariableType writable() throws IOException, SyntaticException, SemanticException {
         if (currentToken.getTag() == TokenType.LITERAL) {
             eat(TokenType.LITERAL);
+            return VariableType.STRING;
         } else {
-            simpleExpr();
+            return simpleExpr();
         }
     }
 
