@@ -177,7 +177,7 @@ public class SyntacticAnalysis {
 
     // assign-stmt ::= identifier ":=" simple_expr
     private void assignStmt() throws IOException, SyntaticException, SemanticException {
-        Symbol var = sem.get_type(currentToken.getLexeme());
+        Symbol var = sem.get_type(currentToken.getLexeme(), lex.getLine());
         eat(TokenType.IDENTIFIER);
         eat(TokenType.DOT_ASSIGN);
         VariableType exprType = this.simpleExpr();
@@ -193,8 +193,8 @@ public class SyntacticAnalysis {
     private void ifStmt() throws IOException, SyntaticException, SemanticException {
         eat(TokenType.IF);
         VariableType condType = this.condition();
-        if (sem.isTypeBollean(condType)) {
-            sem.error("Operador '!' apliacado a um termo não booleano!\nLinha:" + lex.getLine());
+        if (!sem.isTypeBoolean(condType)) {
+            sem.error("Condição não booleana!\nLinha:" + lex.getLine());
         }
         eat(TokenType.THEN);
         stmtList();
@@ -225,7 +225,7 @@ public class SyntacticAnalysis {
             this.relop();
             VariableType right = this.simpleExpr();
 
-            if (sem.isOpTypeCompatible(left, right)) {
+            if (!sem.isOpTypeCompatible(left, right)) {
                 sem.error("Tipos Incompatíveis na expressão!\nLinha:" + lex.getLine());
             }
             return VariableType.BOOLEAN;
@@ -347,7 +347,7 @@ public class SyntacticAnalysis {
         if (currentToken.getTag() == TokenType.NOT) {
             eat(TokenType.NOT);
             VariableType factorType = factor();
-            if (!sem.isTypeBollean(factorType)) {
+            if (!sem.isTypeBoolean(factorType)) {
                 sem.error("Operador '!' apliacado a um termo não booleano!\nLinha:" + lex.getLine());
             }
             return VariableType.BOOLEAN;
@@ -368,7 +368,7 @@ public class SyntacticAnalysis {
     private VariableType factor() throws IOException, SyntaticException, SemanticException {
         VariableType type;
         if (currentToken.getTag() == TokenType.IDENTIFIER) {
-            Symbol var = sem.get_type(currentToken.getLexeme());
+            Symbol var = sem.get_type(currentToken.getLexeme(), lex.getLine());
             eat(TokenType.IDENTIFIER);
             type = var.getType();
         } else if (currentToken.getTag() == TokenType.OPEN_PAR) {
@@ -419,7 +419,7 @@ public class SyntacticAnalysis {
                 eat(TokenType.UNTIL);
                 VariableType condType = condition();
 
-                if (!sem.isTypeBollean(condType)) {
+                if (!sem.isTypeBoolean(condType)) {
                     sem.error("Operador '!' apliacado a um termo não booleano!\nLinha:" + lex.getLine());
                 }
                 break;
@@ -438,7 +438,7 @@ public class SyntacticAnalysis {
                 if (currentToken.getTag() == TokenType.OPEN_PAR) {
                     eat(TokenType.OPEN_PAR);
                     // Verificar se a variavel foi declarada
-                    sem.get_type(currentToken.getLexeme());
+                    sem.get_type(currentToken.getLexeme(), lex.getLine());
                     eat(TokenType.IDENTIFIER);
                     eat(TokenType.CLOSE_PAR);
                 } else {

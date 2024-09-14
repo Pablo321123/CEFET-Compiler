@@ -26,16 +26,16 @@ public class SemanticAnaliser {
     // Add variable in Symbol Table
     public void declare(VariableType type, String name, int line) throws SemanticException {
         if (symbolTable.containsKey(name)) {
-            error("A variavel " + name + "ja foi declarada na linha " + line);
+            error("A variavel " + name + " já foi declarada na linha " + line);
         } else {
             symbolTable.put(name, new Symbol(type, name, line));
         }
     }
 
-    // Verify varible type
-    public Symbol get_type(String variableName) throws SemanticException {
+    // Verify variable type
+    public Symbol get_type(String variableName, int line) throws SemanticException {
         if (symbolTable.get(variableName) == null) {
-            error("A variavel " + variableName + " não foi declarada!");
+            error("A variavel " + variableName + " não foi declarada! Linha: " + line);
         }
         return symbolTable.get(variableName);
     }
@@ -76,17 +76,25 @@ public class SemanticAnaliser {
             } else {
                 throw new SemanticException("Erro na linha " + line + ": Operação lógica com operandos não booleanos.");
             }
+        } else if (op == TokenType.ASSIGN || op == TokenType.GREATER || op == TokenType.GREATER_EQUAL
+                || op == TokenType.LESS || op == TokenType.LESS_EQUAL || op == TokenType.NOT_EQUAL) {
+            if (isOpTypeCompatible(left, right)) {
+                return VariableType.BOOLEAN;
+            } else {
+                throw new SemanticException(
+                        "Erro na linha " + line + ": Operação relacional com operandos incompatíveis.");
+            }
         } else {
             throw new SemanticException("Erro na linha " + line + ": Operador desconhecido.");
         }
     }
 
-    public boolean isTypeBollean(VariableType type) {
+    public boolean isTypeBoolean(VariableType type) {
         return type == VariableType.BOOLEAN;
     }
 
     public boolean isTypeNumeric(VariableType type) {
-        return type == VariableType.INTEGER || type != VariableType.REAL;
+        return type == VariableType.INTEGER || type == VariableType.REAL;
     }
 
     public void error(String msg) throws SemanticException {
